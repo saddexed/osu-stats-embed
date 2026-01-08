@@ -1,0 +1,43 @@
+import { VercelRequest, VercelResponse } from "@vercel/node";
+import { getUser } from "../utils/osu";
+import { generateSvg } from "../utils/svg";
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  try {
+    const { username } = req.query;
+
+    if (!username || typeof username !== "string") {
+      res.status(400).send("Missing username query parameter");
+      return;
+    }
+
+    const apiKey = process.env.OSU_API_KEY;
+    if (!apiKey) {
+      res.status(500).send("Server configuration error: OSU_API_KEY missing");
+      return;
+    }
+
+    const user = await getUser(username, apiKey);
+
+    if (!user) {
+      res.status(404).send("User not found");
+      return;
+    }
+
+    const options = {
+      show_pp: req.query.pp !== "false",
+      show_accuracy: req.query.accuracy !== "false",
+      show_playcount: req.query.playcount !== "false",
+      show_playtime: req.query.playtime !== "false",
+    };
+
+    const svg = generateSvg(user, options);
+
+    res.setHeader("Content-Type", "image/svg+xml");
+    res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate"); // Cache for 1 hour
+    res.status(200).send(svg);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Internal Server Error");
+  }
+}
