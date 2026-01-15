@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUser } from "../utils/osu";
 import { generateSvg } from "../utils/svg";
+import { fetchImageAsBase64 } from "../utils/imageUtils";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
@@ -24,6 +25,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    // Fetch avatar as base64 to bypass GitHub's CSP
+    const avatarUrl = `https://a.ppy.sh/${user.user_id}`;
+    const avatarBase64 = await fetchImageAsBase64(avatarUrl);
+
     const options = {
       show_pp: req.query.pp !== "false",
       show_accuracy: req.query.acc !== "false",
@@ -32,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       hide_all: req.query.hide_all !== "false",
     };
 
-    const svg = generateSvg(user, options);
+    const svg = generateSvg(user, options, avatarBase64);
 
     res.setHeader("Content-Type", "image/svg+xml");
     res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate"); // Cache for 1 hour

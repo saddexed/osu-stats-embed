@@ -8,7 +8,11 @@ export interface SvgOptions {
   hide_all?: boolean;
 }
 
-export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
+export function generateSvg(
+  user: OsuUser, 
+  options: SvgOptions = {}, 
+  avatarBase64?: string
+): string {
   function formatNumber(num: number): string {
     if (num >= 1000000000) return (num / 1000000000).toFixed(1) + "b";
     if (num >= 1000000) return (num / 1000000).toFixed(1) + "m";
@@ -26,7 +30,7 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
   const accuracy = `${Number(user.accuracy).toFixed(2)}%`;
   const country = user.country;
 
-  const avatarUrl = `https://a.ppy.sh/${user.user_id}`;
+  const avatarUrl = avatarBase64 || `https://a.ppy.sh/${user.user_id}`;
 
   const flagUrl = `https://flagcdn.com/${country.toLowerCase()}.svg`;
 
