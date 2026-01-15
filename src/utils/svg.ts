@@ -9,7 +9,6 @@ export interface SvgOptions {
 }
 
 export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
-  // Helper function for k/m/b formatting
   function formatNumber(num: number): string {
     if (num >= 1000000000) return (num / 1000000000).toFixed(1) + "b";
     if (num >= 1000000) return (num / 1000000).toFixed(1) + "m";
@@ -17,7 +16,6 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
     return num.toString();
   }
 
-  // Parsing stats
   const username = user.username;
   const rank = `#${Number(user.pp_rank).toLocaleString()}`;
   const pp = `${Math.round(Number(user.pp_raw))}`;
@@ -28,15 +26,12 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
   const accuracy = `${Number(user.accuracy).toFixed(2)}%`;
   const country = user.country;
 
-  // Avatar URL
   const avatarUrl = `https://a.ppy.sh/${user.user_id}`;
 
-  // Flag URL (kept for future use)
   const flagUrl = `https://flagcdn.com/${country.toLowerCase()}.svg`;
 
   const width = 480;
 
-  // Dynamic Stats Configuration
   const {
     show_pp = true,
     show_accuracy = true,
@@ -45,7 +40,6 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
     hide_all = false,
   } = options;
 
-  // If hide_all is true, show no stats and use compact height
   const height = hide_all ? 160 : 240;
 
   const stats = hide_all
@@ -57,7 +51,6 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
         { text: playtimeHours, show: show_playtime },
       ].filter((s) => s.show);
 
-  // Helper function for Level XP
   function getRequiredScore(n: number): number {
     if (n <= 100) {
       return (
@@ -72,27 +65,23 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
   const currentScore = Number(user.total_score);
   const nextScore = getRequiredScore(nextLv);
 
-  // Progress calculation
   let progress = 0;
   if (nextScore > currentScore) {
     progress = currentScore / nextScore;
   }
-  // Clamp progress between 0 and 1
   progress = Math.max(0, Math.min(1, progress));
 
   const progressPercent = Math.round(progress * 100);
-  const joinDate = user.join_date; // Full date string
+  const joinDate = user.join_date;
 
-  // Layout Logic for Stats - 2-row grid (max 2 columns per row)
   const startX = 20;
   const startY = 140;
-  const totalStatsWidth = width - startX * 2; // 440px available
+  const totalStatsWidth = width - startX * 2;
   const gap = 8;
   const rowHeight = 45;
   const rowGap = 8;
   const count = stats.length;
 
-  // 2 columns max per row
   const columns = Math.min(count, 2);
   const cardWidth =
     columns > 0 ? (totalStatsWidth - gap * (columns - 1)) / columns : 0;
@@ -104,7 +93,6 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
         const col = i % 2;
         const row = Math.floor(i / 2);
         const isLastItemAlone = count % 2 === 1 && i === count - 1;
-        // Center the card if it's the only one in its row
         const xPos = isLastItemAlone
           ? startX + (totalStatsWidth - cardWidth) / 2
           : startX + (cardWidth + gap) * col;
@@ -163,41 +151,43 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
       .join-date { font: 400 14px 'Segoe UI', Ubuntu, Sans-Serif; fill: #64748b; }
     </style>
 
-    <!-- Background -->
-    <rect x="0" y="0" width="${width}" height="${height}" rx="12" stroke="#333" stroke-width="1" stroke-opacity="0.3" />
-    <rect x="0" y="0" width="${width}" height="${height}" rx="12" class="bg-img" stroke="#333" stroke-width="1" stroke-opacity="0.3" />
+    <a href="https://osu.ppy.sh/users/${user.user_id}" target="_top">
+      <!-- Background -->
+      <rect x="0" y="0" width="${width}" height="${height}" rx="12" stroke="#333" stroke-width="1" stroke-opacity="0.3" />
+      <rect x="0" y="0" width="${width}" height="${height}" rx="12" class="bg-img" stroke="#333" stroke-width="1" stroke-opacity="0.3" />
 
-    <!-- Avatar Glow Effect -->
-    <circle cx="54" cy="54" r="42" fill="url(#glowGradient)" filter="url(#glow)" opacity="0.6" />
-    <circle cx="54" cy="54" r="40" fill="#1e1e1e" />
-    
-    <!-- Avatar Image -->
-    <image x="14" y="14" width="80" height="80" clip-path="url(#avatar-clip)" xlink:href="${avatarUrl}" />
-    
-    <!-- Username -->
-    <text x="105" y="35" class="username" dominant-baseline="central">${username}</text>
-    
-    <!-- Rank -->
-    <text x="440" y="80" class="rank-value" dominant-baseline="central">${rank}</text>
+      <!-- Avatar Glow Effect -->
+      <circle cx="54" cy="54" r="42" fill="url(#glowGradient)" filter="url(#glow)" opacity="0.6" />
+      <circle cx="54" cy="54" r="40" fill="#1e1e1e" />
+      
+      <!-- Avatar Image -->
+      <image x="14" y="14" width="80" height="80" clip-path="url(#avatar-clip)" xlink:href="${avatarUrl}" />
+      
+      <!-- Username -->
+      <text x="105" y="35" class="username" dominant-baseline="central">${username}</text>
+      
+      <!-- Rank -->
+      <text x="440" y="80" class="rank-value" dominant-baseline="central">${rank}</text>
 
-    <!-- Level Box -->
-    <rect x="12" y="107" width="80" height="30" rx="5" class="lv-bg" fill="#ffffff" opacity="0.6"/>
-    <text x="52" y="128" class="level-text"> Lv. ${currentLv} </text>
+      <!-- Level Box -->
+      <rect x="12" y="107" width="80" height="30" rx="5" class="lv-bg" fill="#ffffff" opacity="0.6"/>
+      <text x="52" y="128" class="level-text"> Lv. ${currentLv} </text>
 
-    <!-- XP Bar -->
-    <rect x="110" y="120" width="295" height="6" rx="3" class="xp-bar-bg" />
-    <rect x="110" y="120" width="${295 * progress}" height="6" rx="3" class="xp-bar-fill" />
-    <!-- Progress Head -->
-    <rect x="${110 + 295 * progress - 10}" y="117" width="20" height="12" rx="3" class="lv-bg" style="fill: #ffffffff;"/>
+      <!-- XP Bar -->
+      <rect x="110" y="120" width="295" height="6" rx="3" class="xp-bar-bg" />
+      <rect x="110" y="120" width="${295 * progress}" height="6" rx="3" class="xp-bar-fill" />
+      <!-- Progress Head -->
+      <rect x="${110 + 295 * progress - 10}" y="117" width="20" height="12" rx="3" class="lv-bg" style="fill: #ffffffff;"/>
 
-    <!-- Level Progress -->
-    <text x="440" y="122" class="level-text" dominant-baseline="central" text-anchor="middle">${progressPercent}%</text>
+      <!-- Level Progress -->
+      <text x="440" y="122" class="level-text" dominant-baseline="central" text-anchor="middle">${progressPercent}%</text>
 
-    <!-- Stats Grid -->
-    ${statsHtml}
+      <!-- Stats Grid -->
+      ${statsHtml}
 
-    <!-- Join Date -->
-    <text x="460" y="228" text-anchor="end" class="join-date">Joined ${joinDate}</text>
+      <!-- Join Date -->
+      <!-- <text x="460" y="228" text-anchor="end" class="join-date">Joined ${joinDate}</text> -->
+    </a>
 
   </svg>
   `;

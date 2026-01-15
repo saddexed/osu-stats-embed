@@ -20,7 +20,6 @@ export async function getUser(
     });
 
     if (response.data && response.data.length > 0) {
-      // console.log(response.data);
       return response.data[0];
     }
     return null;

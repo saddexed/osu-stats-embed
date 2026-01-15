@@ -7,7 +7,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { username } = req.query;
 
     if (!username || typeof username !== "string") {
-      res.status(400).send("Missing username query parameter");
+      res.status(400).send("Missing username in path");
       return;
     }
 
