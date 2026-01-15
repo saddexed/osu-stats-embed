@@ -5,6 +5,7 @@ export interface SvgOptions {
   show_accuracy?: boolean;
   show_playcount?: boolean;
   show_playtime?: boolean;
+  hide_all?: boolean;
 }
 
 export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
@@ -34,7 +35,6 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
   const flagUrl = `https://flagcdn.com/${country.toLowerCase()}.svg`;
 
   const width = 480;
-  const height = 240;
 
   // Dynamic Stats Configuration
   const {
@@ -42,14 +42,20 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
     show_accuracy = true,
     show_playcount = true,
     show_playtime = true,
+    hide_all = false,
   } = options;
 
-  const stats = [
-    { text: `${pp}pp`, show: show_pp },
-    { text: accuracy, show: show_accuracy },
-    { text: `${playcount} plays`, show: show_playcount },
-    { text: playtimeHours, show: show_playtime },
-  ].filter((s) => s.show);
+  // If hide_all is true, show no stats and use compact height
+  const height = hide_all ? 160 : 240;
+
+  const stats = hide_all
+    ? []
+    : [
+        { text: `${pp}pp`, show: show_pp },
+        { text: accuracy, show: show_accuracy },
+        { text: `${playcount} plays`, show: show_playcount },
+        { text: playtimeHours, show: show_playtime },
+      ].filter((s) => s.show);
 
   // Helper function for Level XP
   function getRequiredScore(n: number): number {
@@ -77,27 +83,35 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
   const progressPercent = Math.round(progress * 100);
   const joinDate = user.join_date; // Full date string
 
-  // Layout Logic for Stats
+  // Layout Logic for Stats - 2-row grid (max 2 columns per row)
   const startX = 20;
-  const totalStatsWidth = width - startX * 2;
+  const startY = 140;
+  const totalStatsWidth = width - startX * 2; // 440px available
   const gap = 8;
+  const rowHeight = 45;
+  const rowGap = 8;
   const count = stats.length;
+
+  // 2 columns max per row
+  const columns = Math.min(count, 2);
   const cardWidth =
-    count > 0 ? (totalStatsWidth - gap * (count - 1)) / count : 0;
+    columns > 0 ? (totalStatsWidth - gap * (columns - 1)) / columns : 0;
 
   let statsHtml = "";
   if (count > 0) {
     statsHtml = stats
       .map((stat, i) => {
-        const xPos = startX + (cardWidth + gap) * i;
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const isLastItemAlone = count % 2 === 1 && i === count - 1;
+        // Center the card if it's the only one in its row
+        const xPos = isLastItemAlone
+          ? startX + (totalStatsWidth - cardWidth) / 2
+          : startX + (cardWidth + gap) * col;
+        const yPos = startY + (rowHeight + rowGap) * row;
         return `
-    <rect x="${xPos}" y="140" width="${cardWidth}" height="45" rx="8" class="card-bg" />
-    <text x="${
-      xPos + cardWidth / 2
-    }" y="168" text-anchor="middle" class="stat-value" textLength="${Math.min(
-          cardWidth - 10,
-          stat.text.length * 10
-        )}" lengthAdjust="spacingAndGlyphs">${stat.text}</text>`;
+    <rect x="${xPos}" y="${yPos}" width="${cardWidth}" height="${rowHeight}" rx="8" class="card-bg" />
+    <text x="${xPos + cardWidth / 2}" y="${yPos + rowHeight / 2 + 5}" text-anchor="middle" class="stat-value" textLength="${Math.min(cardWidth - 10, stat.text.length * 12)}" lengthAdjust="spacingAndGlyphs">${stat.text}</text>`;
       })
       .join("");
   }

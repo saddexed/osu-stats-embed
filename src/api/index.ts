@@ -26,9 +26,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const options = {
       show_pp: req.query.pp !== "false",
-      show_accuracy: req.query.accuracy !== "false",
-      show_playcount: req.query.playcount !== "false",
-      show_playtime: req.query.playtime !== "false",
+      show_accuracy: req.query.acc !== "false",
+      show_playcount: req.query.count !== "false",
+      show_playtime: req.query.time !== "false",
+      hide_all: req.query.hide_all !== "false",
     };
 
     const svg = generateSvg(user, options);
