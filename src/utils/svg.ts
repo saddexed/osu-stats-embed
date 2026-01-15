@@ -8,12 +8,20 @@ export interface SvgOptions {
 }
 
 export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
+  // Helper function for k/m/b formatting
+  function formatNumber(num: number): string {
+    if (num >= 1000000000) return (num / 1000000000).toFixed(1) + "b";
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + "m";
+    if (num >= 1000) return (num / 1000).toFixed(1) + "k";
+    return num.toString();
+  }
+
   // Parsing stats
   const username = user.username;
   const rank = `#${Number(user.pp_rank).toLocaleString()}`;
   const pp = `${Math.round(Number(user.pp_raw))}`;
-  const level = `Lv. ${Number(user.level).toFixed(2)}`;
-  const playcount = Number(user.playcount).toLocaleString();
+  const currentLv = parseInt(user.level);
+  const playcount = formatNumber(Number(user.playcount));
   const playtimeHours =
     Math.round(Number(user.total_seconds_played) / 3600).toLocaleString() + "h";
   const accuracy = `${Number(user.accuracy).toFixed(2)}%`;
@@ -22,8 +30,11 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
   // Avatar URL
   const avatarUrl = `https://a.ppy.sh/${user.user_id}`;
 
-  const width = 500; // Reduced width
-  const height = 220; // Reduced height
+  // Flag URL (kept for future use)
+  const flagUrl = `https://flagcdn.com/${country.toLowerCase()}.svg`;
+
+  const width = 480;
+  const height = 240;
 
   // Dynamic Stats Configuration
   const {
@@ -34,18 +45,43 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
   } = options;
 
   const stats = [
-    { label: "PP", value: pp, show: show_pp },
-    { label: "ACCURACY", value: accuracy, show: show_accuracy },
-    { label: "PLAYCOUNT", value: playcount, show: show_playcount },
-    { label: "PLAYTIME", value: playtimeHours, show: show_playtime },
+    { text: `${pp}pp`, show: show_pp },
+    { text: accuracy, show: show_accuracy },
+    { text: `${playcount} plays`, show: show_playcount },
+    { text: playtimeHours, show: show_playtime },
   ].filter((s) => s.show);
 
-  // Layout Logic
-  const startX = 30;
-  const totalStatsWidth = width - startX * 2; // 440px available
-  const gap = 10;
+  // Helper function for Level XP
+  function getRequiredScore(n: number): number {
+    if (n <= 100) {
+      return (
+        (5000 / 3) * (4 * Math.pow(n, 3) - 3 * Math.pow(n, 2) - n) +
+        1.25 * Math.pow(1.8, n - 60)
+      );
+    }
+    return 26931190827 + 99999999999 * (n - 100);
+  }
+
+  const nextLv = currentLv + 1;
+  const currentScore = Number(user.total_score);
+  const nextScore = getRequiredScore(nextLv);
+
+  // Progress calculation
+  let progress = 0;
+  if (nextScore > currentScore) {
+    progress = currentScore / nextScore;
+  }
+  // Clamp progress between 0 and 1
+  progress = Math.max(0, Math.min(1, progress));
+
+  const progressPercent = Math.round(progress * 100);
+  const joinDate = user.join_date; // Full date string
+
+  // Layout Logic for Stats
+  const startX = 20;
+  const totalStatsWidth = width - startX * 2;
+  const gap = 8;
   const count = stats.length;
-  // If no stats are shown, we handle gracefully
   const cardWidth =
     count > 0 ? (totalStatsWidth - gap * (count - 1)) / count : 0;
 
@@ -53,17 +89,15 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
   if (count > 0) {
     statsHtml = stats
       .map((stat, i) => {
-        const xPos = (cardWidth + gap) * i;
+        const xPos = startX + (cardWidth + gap) * i;
         return `
-      <g transform="translate(${xPos}, 0)">
-        <rect x="0" y="0" width="${cardWidth}" height="80" rx="8" class="card-bg" />
-        <text x="${
-          cardWidth / 2
-        }" y="25" text-anchor="middle" class="stat-label">${stat.label}</text>
-        <text x="${
-          cardWidth / 2
-        }" y="55" text-anchor="middle" class="stat-value">${stat.value}</text>
-      </g>`;
+    <rect x="${xPos}" y="140" width="${cardWidth}" height="45" rx="8" class="card-bg" />
+    <text x="${
+      xPos + cardWidth / 2
+    }" y="168" text-anchor="middle" class="stat-value" textLength="${Math.min(
+          cardWidth - 10,
+          stat.text.length * 10
+        )}" lengthAdjust="spacingAndGlyphs">${stat.text}</text>`;
       })
       .join("");
   }
@@ -91,76 +125,70 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
         </feMerge>
       </filter>
 
+      <pattern id="flagPattern" patternUnits="objectBoundingBox" width="1" height="1">
+        <image x="0" y="0" width="${width}px" height="${height}px" preserveAspectRatio="none" xlink:href="${flagUrl}" />
+      </pattern>
+
       <clipPath id="avatar-clip">
-        <circle cx="55" cy="55" r="35" />
+        <circle cx="54" cy="54" r="40" />
       </clipPath>
     </defs>
 
     <style>
-      .bg { fill: url(#bgGradient); }
+      .bg-img { fill: url(#flagPattern); opacity: 0; }
+      .username { font: 700 40px 'Segoe UI', Ubuntu, Sans-Serif; fill: #fff; }
+      .rank-value { font: 800 56px 'Segoe UI', Ubuntu, Sans-Serif; fill: #ff66aa; text-anchor: end; font-style: italic; }
+      .sub-info { font: 600 20px 'Segoe UI', Ubuntu, Sans-Serif; fill: #cbd5e1; }
+      .level-text { font: 700 18px 'Segoe UI', Ubuntu, Sans-Serif; fill: #00ddff; text-anchor: middle;}
+      .lv-bg { fill: #1d7b89; }
+      .stat-value { font: 700 20px 'Segoe UI', Ubuntu, Sans-Serif; fill: #fff; }
       .card-bg { fill: #1e293b; opacity: 0.5; }
-      
-      .username { font: 700 24px 'Segoe UI', Ubuntu, Sans-Serif; fill: #fff; }
-      .rank-label { font: 600 10px 'Segoe UI', Ubuntu, Sans-Serif; fill: #94a3b8; letter-spacing: 1px; }
-      .rank-value { font: 800 30px 'Segoe UI', Ubuntu, Sans-Serif; fill: #ff66aa; }
-      
-      .sub-info { font: 400 15px 'Segoe UI', Ubuntu, Sans-Serif; fill: #cbd5e1; }
-      .sub-icon { fill: #fbbf24; } /* gold for star */
-      .country-icon { fill: #38bdf8; } /* blue for globe */
-      
-      .stat-label { font: 600 11px 'Segoe UI', Ubuntu, Sans-Serif; fill: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
-      .stat-value { font: 700 18px 'Segoe UI', Ubuntu, Sans-Serif; fill: #fff; }
-      
-      .divider { stroke: #334155; stroke-width: 1; }
+      .xp-bar-bg { fill: #6a6a6aff; }
+      .xp-bar-fill { fill: #00ddff; }
+      .progress { font: 600 18px 'Segoe UI', Ubuntu, Sans-Serif; fill: #cbd5e1; }
+      .join-date { font: 400 14px 'Segoe UI', Ubuntu, Sans-Serif; fill: #64748b; }
     </style>
 
     <!-- Background -->
-    <rect x="0" y="0" width="${width}" height="${height}" rx="12" class="bg" stroke="#333" stroke-width="1" stroke-opacity="0.3" />
+    <rect x="0" y="0" width="${width}" height="${height}" rx="12" stroke="#333" stroke-width="1" stroke-opacity="0.3" />
+    <rect x="0" y="0" width="${width}" height="${height}" rx="12" class="bg-img" stroke="#333" stroke-width="1" stroke-opacity="0.3" />
 
     <!-- Avatar Glow Effect -->
-    <circle cx="55" cy="55" r="38" fill="url(#glowGradient)" filter="url(#glow)" opacity="0.6" />
-    <circle cx="55" cy="55" r="36" fill="#1e1e1e" /> <!-- Border behind avatar -->
+    <circle cx="54" cy="54" r="42" fill="url(#glowGradient)" filter="url(#glow)" opacity="0.6" />
+    <circle cx="54" cy="54" r="40" fill="#1e1e1e" />
     
     <!-- Avatar Image -->
-    <image x="20" y="20" width="70" height="70" clip-path="url(#avatar-clip)" xlink:href="${avatarUrl}" />
+    <image x="14" y="14" width="80" height="80" clip-path="url(#avatar-clip)" xlink:href="${avatarUrl}" />
+    
+    <!-- Username -->
+    <text x="105" y="35" class="username" dominant-baseline="central">${username}</text>
+    
+    <!-- Rank -->
+    <text x="440" y="80" class="rank-value" dominant-baseline="central">${rank}</text>
 
-    <!-- Top Section -->
-    <g transform="translate(110, 50)">
-      <text x="0" y="-12" class="username" dominant-baseline="central">${username}</text>
-      
-      <g transform="translate(0, 18)">
-        <!-- Level Section -->
-        <g class="sub-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <g transform="translate(0, -12) scale(0.8)">
-            <path d="M18.483 16.767A8.5 8.5 0 0 1 8.118 7.081a1 1 0 0 1-.113.097c-.28.213-.63.292-1.33.45l-.635.144c-2.46.557-3.69.835-3.983 1.776c-.292.94.546 1.921 2.223 3.882l.434.507c.476.557.715.836.822 1.18c.107.345.071.717-.001 1.46l-.066.677c-.253 2.617-.38 3.925.386 4.506s1.918.052 4.22-1.009l.597-.274c.654-.302.981-.452 1.328-.452s.674.15 1.329.452l.595.274c2.303 1.06 3.455 1.59 4.22 1.01c.767-.582.64-1.89.387-4.507z"/>
-            <path fill="#7d00f1" d="m9.153 5.408l-.328.588c-.36.646-.54.969-.82 1.182q.06-.045.113-.097a8.5 8.5 0 0 0 10.366 9.686l-.02-.19c-.071-.743-.107-1.115 0-1.46c.107-.344.345-.623.822-1.18l.434-.507c1.677-1.96 2.515-2.941 2.222-3.882c-.292-.941-1.522-1.22-3.982-1.776l-.636-.144c-.699-.158-1.049-.237-1.33-.45c-.28-.213-.46-.536-.82-1.182l-.327-.588C13.58 3.136 12.947 2 12 2s-1.58 1.136-2.847 3.408"/>
-          </g>
-        </g>
-        <text x="26" y="0" class="sub-info" dominant-baseline="middle">${level}</text>
-        
-        <!-- Country Section -->
-        <g transform="translate(135, 0)">
-          <g transform="translate(0, -11) scale(0.8)" class="country-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20a14.5 14.5 0 0 0 0-20M2 12h20"/>
-          </g>
-          <text x="24" y="0" class="sub-info" dominant-baseline="middle">${country}</text>
-        </g>
-      </g>
-    </g>
+    <!-- Level Box -->
+    <rect x="12" y="107" width="80" height="30" rx="3" class="lv-bg" fill="#ffffff" opacity="0.6"/>
+    <text x="52" y="128" class="level-text"> Lv. ${currentLv} </text>
 
-    <!-- Rank Section (Top Right) -->
-    <g transform="translate(${width - 30}, 50)" text-anchor="end">
-      <text x="0" y="-10" class="rank-value" dominant-baseline="central">${rank}</text>
-      <text x="0" y="16" class="rank-label" dominant-baseline="central">GLOBAL RANK</text>
-    </g>
+    <!-- XP Bar -->
+    <rect x="110" y="120" width="340" height="6" rx="3" class="xp-bar-bg" />
+    <rect x="110" y="120" width="${
+      340 * progress
+    }" height="6" rx="3" class="xp-bar-fill" />
 
-    <!-- Divider -->
-    <line x1="30" y1="100" x2="${width - 30}" y2="100" class="divider" />
+    <!-- Level Progress -->
+    <rect x="${
+      110 + 340 * progress - 20
+    }" y="108" width="40" height="20" rx="3" class="lv-bg" opacity="0.8"/>
+    <text x="${
+      110 + 340 * progress
+    }" y="120" class="progress" dominant-baseline="central" text-anchor="middle">${progressPercent}%</text>
 
     <!-- Stats Grid -->
-    <g transform="translate(${startX}, 120)">
-      ${statsHtml}
-    </g>
+    ${statsHtml}
+
+    <!-- Join Date -->
+    <text x="460" y="228" text-anchor="end" class="join-date">Joined ${joinDate}</text>
 
   </svg>
   `;
