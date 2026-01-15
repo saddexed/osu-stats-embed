@@ -145,7 +145,7 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
       .card-bg { fill: #1e293b; opacity: 0.5; }
       .xp-bar-bg { fill: #6a6a6aff; }
       .xp-bar-fill { fill: #00ddff; }
-      .progress { font: 600 18px 'Segoe UI', Ubuntu, Sans-Serif; fill: #cbd5e1; }
+      .progress { font: 600 18px 'Segoe UI', Ubuntu, Sans-Serif; fill: #518f91ff; }
       .join-date { font: 400 14px 'Segoe UI', Ubuntu, Sans-Serif; fill: #64748b; }
     </style>
 
@@ -167,22 +167,17 @@ export function generateSvg(user: OsuUser, options: SvgOptions = {}): string {
     <text x="440" y="80" class="rank-value" dominant-baseline="central">${rank}</text>
 
     <!-- Level Box -->
-    <rect x="12" y="107" width="80" height="30" rx="3" class="lv-bg" fill="#ffffff" opacity="0.6"/>
+    <rect x="12" y="107" width="80" height="30" rx="5" class="lv-bg" fill="#ffffff" opacity="0.6"/>
     <text x="52" y="128" class="level-text"> Lv. ${currentLv} </text>
 
     <!-- XP Bar -->
-    <rect x="110" y="120" width="340" height="6" rx="3" class="xp-bar-bg" />
-    <rect x="110" y="120" width="${
-      340 * progress
-    }" height="6" rx="3" class="xp-bar-fill" />
+    <rect x="110" y="120" width="295" height="6" rx="3" class="xp-bar-bg" />
+    <rect x="110" y="120" width="${295 * progress}" height="6" rx="3" class="xp-bar-fill" />
+    <!-- Progress Head -->
+    <rect x="${110 + 295 * progress - 10}" y="117" width="20" height="12" rx="3" class="lv-bg" style="fill: #ffffffff;"/>
 
     <!-- Level Progress -->
-    <rect x="${
-      110 + 340 * progress - 20
-    }" y="108" width="40" height="20" rx="3" class="lv-bg" opacity="0.8"/>
-    <text x="${
-      110 + 340 * progress
-    }" y="120" class="progress" dominant-baseline="central" text-anchor="middle">${progressPercent}%</text>
+    <text x="440" y="122" class="level-text" dominant-baseline="central" text-anchor="middle">${progressPercent}%</text>
 
     <!-- Stats Grid -->
     ${statsHtml}
