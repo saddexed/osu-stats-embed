@@ -1,11 +1,7 @@
 import { OsuUser } from "../types";
 
 export interface SvgOptions {
-  show_pp?: boolean;
-  show_accuracy?: boolean;
-  show_playcount?: boolean;
-  show_playtime?: boolean;
-  hide_all?: boolean;
+  extended?: boolean;
 }
 
 export function generateSvg(
@@ -22,9 +18,9 @@ export function generateSvg(
 
   const username = user.username;
   const rank = `#${Number(user.pp_rank).toLocaleString()}`;
-  const pp = `${Math.round(Number(user.pp_raw))}`;
+  const pp = `${Math.round(Number(user.pp_raw))}pp`;
   const currentLv = parseInt(user.level);
-  const playcount = formatNumber(Number(user.playcount));
+  const playcount = `${formatNumber(Number(user.playcount))} plays`;
   const playtimeHours =
     Math.round(Number(user.total_seconds_played) / 3600).toLocaleString() + "h";
   const accuracy = `${Number(user.accuracy).toFixed(2)}%`;
@@ -35,25 +31,8 @@ export function generateSvg(
   const flagUrl = `https://flagcdn.com/${country.toLowerCase()}.svg`;
 
   const width = 480;
-
-  const {
-    show_pp = true,
-    show_accuracy = true,
-    show_playcount = true,
-    show_playtime = true,
-    hide_all = false,
-  } = options;
-
-  const height = hide_all ? 160 : 240;
-
-  const stats = hide_all
-    ? []
-    : [
-        { text: `${pp}pp`, show: show_pp },
-        { text: accuracy, show: show_accuracy },
-        { text: `${playcount} plays`, show: show_playcount },
-        { text: playtimeHours, show: show_playtime },
-      ].filter((s) => s.show);
+  const { extended = false } = options;
+  const height = extended ? 160 : 240;
 
   function getRequiredScore(n: number): number {
     if (n <= 100) {
@@ -76,36 +55,37 @@ export function generateSvg(
   progress = Math.max(0, Math.min(1, progress));
 
   const progressPercent = Math.round(progress * 100);
-  const joinDate = user.join_date;
 
+  // Hardcoded stat positions in a 2x2 grid
   const startX = 20;
   const startY = 140;
-  const totalStatsWidth = width - startX * 2;
   const gap = 8;
   const rowHeight = 45;
   const rowGap = 8;
-  const count = stats.length;
+  const cardWidth = (width - startX * 2 - gap) / 2; // Two columns
 
-  const columns = Math.min(count, 2);
-  const cardWidth =
-    columns > 0 ? (totalStatsWidth - gap * (columns - 1)) / columns : 0;
-
+  // Generate stats HTML only if not hiding all
   let statsHtml = "";
-  if (count > 0) {
-    statsHtml = stats
-      .map((stat, i) => {
-        const col = i % 2;
-        const row = Math.floor(i / 2);
-        const isLastItemAlone = count % 2 === 1 && i === count - 1;
-        const xPos = isLastItemAlone
-          ? startX + (totalStatsWidth - cardWidth) / 2
-          : startX + (cardWidth + gap) * col;
-        const yPos = startY + (rowHeight + rowGap) * row;
-        return `
-    <rect x="${xPos}" y="${yPos}" width="${cardWidth}" height="${rowHeight}" rx="8" class="card-bg" />
-    <text x="${xPos + cardWidth / 2}" y="${yPos + rowHeight / 2 + 5}" text-anchor="middle" class="stat-value" textLength="${Math.min(cardWidth - 10, stat.text.length * 12)}" lengthAdjust="spacingAndGlyphs">${stat.text}</text>`;
-      })
-      .join("");
+  if (!extended) {
+    // Row 1: PP (left) and Accuracy (right)
+    const row1Y = startY;
+    // Row 2: Playcount (left) and Playtime (right)
+    const row2Y = startY + rowHeight + rowGap;
+
+    statsHtml = `
+    <!-- Row 1: PP and Accuracy -->
+    <rect x="${startX}" y="${row1Y}" width="${cardWidth}" height="${rowHeight}" rx="8" class="card-bg" />
+    <text x="${startX + cardWidth / 2}" y="${row1Y + rowHeight / 2 + 5}" text-anchor="middle" class="stat-value">${pp}</text>
+    
+    <rect x="${startX + cardWidth + gap}" y="${row1Y}" width="${cardWidth}" height="${rowHeight}" rx="8" class="card-bg" />
+    <text x="${startX + cardWidth + gap + cardWidth / 2}" y="${row1Y + rowHeight / 2 + 5}" text-anchor="middle" class="stat-value">${accuracy}</text>
+    
+    <!-- Row 2: Playcount and Playtime -->
+    <rect x="${startX}" y="${row2Y}" width="${cardWidth}" height="${rowHeight}" rx="8" class="card-bg" />
+    <text x="${startX + cardWidth / 2}" y="${row2Y + rowHeight / 2 + 5}" text-anchor="middle" class="stat-value">${playcount}</text>
+    
+    <rect x="${startX + cardWidth + gap}" y="${row2Y}" width="${cardWidth}" height="${rowHeight}" rx="8" class="card-bg" />
+    <text x="${startX + cardWidth + gap + cardWidth / 2}" y="${row2Y + rowHeight / 2 + 5}" text-anchor="middle" class="stat-value">${playtimeHours}</text>`;
   }
 
   return `
@@ -157,8 +137,8 @@ export function generateSvg(
 
     <a href="https://osu.ppy.sh/users/${user.user_id}" target="_top">
       <!-- Background -->
-      <rect x="0" y="0" width="${width}" height="${height}" rx="12" stroke="#333" stroke-width="1" stroke-opacity="0.3" />
-      <rect x="0" y="0" width="${width}" height="${height}" rx="12" class="bg-img" stroke="#333" stroke-width="1" stroke-opacity="0.3" />
+      <rect x="0" y="0" width="${width}" height="${height}" rx="15" stroke="#333" stroke-width="1" stroke-opacity="0.3" />
+      <rect x="0" y="0" width="${width}" height="${height}" rx="20" class="bg-img" stroke="#333" stroke-width="1" stroke-opacity="0.3" />
 
       <!-- Avatar Glow Effect -->
       <circle cx="54" cy="54" r="42" fill="url(#glowGradient)" filter="url(#glow)" opacity="0.6" />
@@ -190,9 +170,10 @@ export function generateSvg(
       ${statsHtml}
 
       <!-- Join Date -->
-      <!-- <text x="460" y="228" text-anchor="end" class="join-date">Joined ${joinDate}</text> -->
+      <!-- <text x="460" y="228" text-anchor="end" class="join-date">Joined ${user.join_date}</text> -->
     </a>
 
   </svg>
   `;
 }
+
