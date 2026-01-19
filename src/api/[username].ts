@@ -19,6 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const user = await getUser(username, apiKey);
+    console.log(`queried ${username}`);
 
     if (!user) {
       res.status(404).send("User not found");
@@ -30,11 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const avatarBase64 = await fetchImageAsBase64(avatarUrl);
 
     const options = {
-      show_pp: req.query.pp !== "false",
-      show_accuracy: req.query.acc !== "false",
-      show_playcount: req.query.count !== "false",
-      show_playtime: req.query.time !== "false",
-      hide_all: req.query.hide_all !== "false",
+      stats: req.query.stats === "true",
     };
 
     const svg = generateSvg(user, options, avatarBase64);
