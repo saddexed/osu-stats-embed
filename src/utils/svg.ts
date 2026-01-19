@@ -1,7 +1,7 @@
 import { OsuUser } from "../types";
 
 export interface SvgOptions {
-  extended?: boolean;
+  stats?: boolean;
 }
 
 export function generateSvg(
@@ -20,19 +20,20 @@ export function generateSvg(
   const rank = `#${Number(user.pp_rank).toLocaleString()}`;
   const pp = `${Math.round(Number(user.pp_raw))}pp`;
   const currentLv = parseInt(user.level);
-  const playcount = `${formatNumber(Number(user.playcount))} plays`;
-  const playtimeHours =
-    Math.round(Number(user.total_seconds_played) / 3600).toLocaleString() + "h";
+  // const playcount = `${formatNumber(Number(user.playcount))} plays`;
+  const playcount = `${Number(user.playcount).toLocaleString()}`;
+  const playtime = Math.round(Number(user.total_seconds_played) / 3600).toLocaleString() + "h";
   const accuracy = `${Number(user.accuracy).toFixed(2)}%`;
   const country = user.country;
+  const country_rank = user.pp_country_rank;
 
   const avatarUrl = avatarBase64 || `https://a.ppy.sh/${user.user_id}`;
 
-  const flagUrl = `https://flagcdn.com/${country.toLowerCase()}.svg`;
+  const flagUrl = `https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/${country.toUpperCase().split('').map(c => (c.charCodeAt(0) + 127397).toString(16)).join('-')}.svg`;
 
   const width = 480;
-  const { extended = false } = options;
-  const height = extended ? 160 : 240;
+  const { stats = false } = options;
+  const height = stats ? 240 : 160;
 
   function getRequiredScore(n: number): number {
     if (n <= 100) {
@@ -56,39 +57,7 @@ export function generateSvg(
 
   const progressPercent = Math.round(progress * 100);
 
-  // Hardcoded stat positions in a 2x2 grid
-  const startX = 20;
-  const startY = 140;
-  const gap = 8;
-  const rowHeight = 45;
-  const rowGap = 8;
-  const cardWidth = (width - startX * 2 - gap) / 2; // Two columns
-
-  // Generate stats HTML only if not hiding all
-  let statsHtml = "";
-  if (!extended) {
-    // Row 1: PP (left) and Accuracy (right)
-    const row1Y = startY;
-    // Row 2: Playcount (left) and Playtime (right)
-    const row2Y = startY + rowHeight + rowGap;
-
-    statsHtml = `
-    <!-- Row 1: PP and Accuracy -->
-    <rect x="${startX}" y="${row1Y}" width="${cardWidth}" height="${rowHeight}" rx="8" class="card-bg" />
-    <text x="${startX + cardWidth / 2}" y="${row1Y + rowHeight / 2 + 5}" text-anchor="middle" class="stat-value">${pp}</text>
-    
-    <rect x="${startX + cardWidth + gap}" y="${row1Y}" width="${cardWidth}" height="${rowHeight}" rx="8" class="card-bg" />
-    <text x="${startX + cardWidth + gap + cardWidth / 2}" y="${row1Y + rowHeight / 2 + 5}" text-anchor="middle" class="stat-value">${accuracy}</text>
-    
-    <!-- Row 2: Playcount and Playtime -->
-    <rect x="${startX}" y="${row2Y}" width="${cardWidth}" height="${rowHeight}" rx="8" class="card-bg" />
-    <text x="${startX + cardWidth / 2}" y="${row2Y + rowHeight / 2 + 5}" text-anchor="middle" class="stat-value">${playcount}</text>
-    
-    <rect x="${startX + cardWidth + gap}" y="${row2Y}" width="${cardWidth}" height="${rowHeight}" rx="8" class="card-bg" />
-    <text x="${startX + cardWidth + gap + cardWidth / 2}" y="${row2Y + rowHeight / 2 + 5}" text-anchor="middle" class="stat-value">${playtimeHours}</text>`;
-  }
-
-  return `
+  let response = `
   <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <desc>Osu Stats Card for ${username}</desc>
     
@@ -111,21 +80,18 @@ export function generateSvg(
         </feMerge>
       </filter>
 
-      <pattern id="flagPattern" patternUnits="objectBoundingBox" width="1" height="1">
-        <image x="0" y="0" width="${width}px" height="${height}px" preserveAspectRatio="none" xlink:href="${flagUrl}" />
-      </pattern>
-
       <clipPath id="avatar-clip">
         <circle cx="54" cy="54" r="40" />
       </clipPath>
     </defs>
 
     <style>
-      .bg-img { fill: url(#flagPattern); opacity: 0; }
+      .country-bg { fill: url(#flagPattern); opacity: 0.6; }
       .username { font: 700 40px 'Segoe UI', Ubuntu, Sans-Serif; fill: #fff; }
       .rank-value { font: 800 56px 'Segoe UI', Ubuntu, Sans-Serif; fill: #ff66aa; text-anchor: end; font-style: italic; }
       .sub-info { font: 600 20px 'Segoe UI', Ubuntu, Sans-Serif; fill: #cbd5e1; }
       .level-text { font: 700 18px 'Segoe UI', Ubuntu, Sans-Serif; fill: #00ddff; text-anchor: middle;}
+      .stat-text { font: 700 26px 'Segoe UI', Ubuntu, Sans-Serif; fill: #ffffffff; font-style: italic; }
       .lv-bg { fill: #1d7b89; }
       .stat-value { font: 700 20px 'Segoe UI', Ubuntu, Sans-Serif; fill: #fff; }
       .card-bg { fill: #1e293b; opacity: 0.5; }
@@ -152,11 +118,11 @@ export function generateSvg(
       
       <!-- Rank -->
       <text x="440" y="80" class="rank-value" dominant-baseline="central">${rank}</text>
-
+      
       <!-- Level Box -->
       <rect x="12" y="107" width="80" height="30" rx="5" class="lv-bg" fill="#ffffff" opacity="0.6"/>
       <text x="52" y="128" class="level-text"> Lv. ${currentLv} </text>
-
+      
       <!-- XP Bar -->
       <rect x="110" y="120" width="295" height="6" rx="3" class="xp-bar-bg" />
       <rect x="110" y="120" width="${295 * progress}" height="6" rx="3" class="xp-bar-fill" />
@@ -165,15 +131,36 @@ export function generateSvg(
 
       <!-- Level Progress -->
       <text x="440" y="122" class="level-text" dominant-baseline="central" text-anchor="middle">${progressPercent}%</text>
+  `;
+  response += stats ? `<!-- Stats -->
 
-      <!-- Stats Grid -->
-      ${statsHtml}
+      <!-- Total PlayTime -->
+      <svg x="15" y="140" width="40px" height="40px" viewBox="0 0 24 24"><path fill="#fff" d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12S6.477 2 12 2m0 4a1 1 0 0 0-1 1v5a1 1 0 0 0 .293.707l3 3a1 1 0 0 0 1.414-1.414L13 11.586V7a1 1 0 0 0-1-1"/></svg>
+      <text x="55" y="159" class="stat-text" dominant-baseline="central">${playtime}</text>
 
+      <!-- Country Rank -->
+      <image x="425" y="140" width="40" height="40" xlink:href="${flagUrl}" />
+      <text x="417" y="159" class="stat-text" dominant-baseline="central" text-anchor="end">#${country_rank}</text>
+      
+      <!-- pp -->
+      <text x="240" y="182" class="stat-text" style="font-style: normal; font-size: 36px;" dominant-baseline="central" text-anchor="middle">${pp}</text>
+
+      <!-- Playcount -->
+      <svg x="17" y="190" width="35px" height="35px" viewBox="0 0 24 24"><path fill="#fff" d="M7.755 13.38v6.83a1.54 1.54 0 0 1-1.54 1.54h-1.81a1.54 1.54 0 0 1-1.55-1.54v-6.83a1.54 1.54 0 0 1 1.55-1.55h1.81a1.54 1.54 0 0 1 1.54 1.55m6.7-9.58v16.41a1.54 1.54 0 0 1-1.55 1.54h-1.81a1.55 1.55 0 0 1-1.55-1.54V3.8a1.56 1.56 0 0 1 1.55-1.55h1.81a1.55 1.55 0 0 1 1.55 1.55m6.69 5.18v11.23a1.54 1.54 0 0 1-1.54 1.54h-1.81a1.54 1.54 0 0 1-1.55-1.54V8.98a1.55 1.55 0 0 1 1.55-1.55h1.85a1.55 1.55 0 0 1 1.5 1.55"/></svg>
+      <text x="55" y="208" class="stat-text" dominant-baseline="central" text-anchor="start">${playcount}</text>
+
+      <!-- Accuracy -->
+      <svg x="425" y="190" width="40px" height="40px" viewBox="0 0 16 16"><path fill="#ffffff" fill-rule="evenodd" d="M13.293 0c.39 0 .707.317.707.707V2h1.293a.707.707 0 0 1 .5 1.207l-1.46 1.46A1.14 1.14 0 0 1 13.53 5h-1.47L8.53 8.53a.75.75 0 0 1-1.06-1.06L11 3.94V2.47c0-.301.12-.59.333-.804l1.46-1.46a.7.7 0 0 1 .5-.207M2.5 8a5.5 5.5 0 0 1 6.598-5.39a.75.75 0 0 0 .298-1.47A7 7 0 1 0 14.86 6.6a.75.75 0 0 0-1.47.299q.109.533.11 1.101a5.5 5.5 0 1 1-11 0m5.364-2.496a.75.75 0 0 0-.08-1.498A4 4 0 1 0 11.988 8.3a.75.75 0 0 0-1.496-.111a2.5 2.5 0 1 1-2.63-2.686" clip-rule="evenodd"/></svg>
+      <text x="420" y="208" class="stat-text" dominant-baseline="central" text-anchor="end">${accuracy}</text>
+      
       <!-- Join Date -->
       <!-- <text x="460" y="228" text-anchor="end" class="join-date">Joined ${user.join_date}</text> -->
+      </a>
+    </svg>
+  ` : `
     </a>
-
-  </svg>
-  `;
+    </svg>
+  `
+  return response;
 }
 

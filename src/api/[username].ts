@@ -31,7 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const avatarBase64 = await fetchImageAsBase64(avatarUrl);
 
     const options = {
-      extended: req.query.extended === "true",
+      stats: req.query.stats === "true",
     };
 
     const svg = generateSvg(user, options, avatarBase64);
