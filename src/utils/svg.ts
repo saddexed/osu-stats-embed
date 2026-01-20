@@ -7,7 +7,8 @@ export interface SvgOptions {
 export function generateSvg(
   user: OsuUser, 
   options: SvgOptions = {}, 
-  avatarBase64?: string
+  avatarBase64?: string,
+  flagBase64?: string
 ): string {
   function formatNumber(num: number): string {
     if (num >= 1000000000) return (num / 1000000000).toFixed(1) + "b";
@@ -28,8 +29,6 @@ export function generateSvg(
   const country_rank = user.pp_country_rank;
 
   const avatarUrl = avatarBase64 || `https://a.ppy.sh/${user.user_id}`;
-
-  const flagUrl = `https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/${country.toUpperCase().split('').map(c => (c.charCodeAt(0) + 127397).toString(16)).join('-')}.svg`;
 
   const width = 480;
   const { stats = false } = options;
@@ -139,7 +138,7 @@ export function generateSvg(
       <text x="55" y="159" class="stat-text" dominant-baseline="central">${playtime}</text>
 
       <!-- Country Rank -->
-      <image x="425" y="140" width="40" height="40" xlink:href="${flagUrl}" />
+      <image x="425" y="140" width="40" height="40" xlink:href="${flagBase64}" />
       <text x="417" y="159" class="stat-text" dominant-baseline="central" text-anchor="end">#${country_rank}</text>
       
       <!-- pp -->

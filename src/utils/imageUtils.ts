@@ -1,8 +1,5 @@
 import axios from "axios";
 
-/**
- * Fetches an image from a URL and converts it to a base64 data URI
- */
 export async function fetchImageAsBase64(url: string): Promise<string> {
   try {
     const response = await axios.get<ArrayBuffer>(url, {

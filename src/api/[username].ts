@@ -26,15 +26,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    // Fetch avatar as base64 to bypass GitHub's CSP
+    // Fetch images as base64 to bypass GitHub's CSP
     const avatarUrl = `https://a.ppy.sh/${user.user_id}`;
-    const avatarBase64 = await fetchImageAsBase64(avatarUrl);
+    const flagUrl = `https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/${user.country.toUpperCase().split('').map(c => (c.charCodeAt(0) + 127397).toString(16)).join('-')}.svg`;
+    
+    const [avatarBase64, flagBase64] = await Promise.all([
+      fetchImageAsBase64(avatarUrl),
+      fetchImageAsBase64(flagUrl),
+    ]);
 
     const options = {
       stats: req.query.stats === "true",
     };
 
-    const svg = generateSvg(user, options, avatarBase64);
+    const svg = generateSvg(user, options, avatarBase64, flagBase64);
 
     res.setHeader("Content-Type", "image/svg+xml");
     res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate"); // Cache for 1 hour
